@@ -66,7 +66,7 @@ An iOS app (iOS 17+, iPhone only, portrait) that records up to 6 Polar H10 heart
 - **Free Apple account**: the app expires after 7 days; rebuild and Run again to refresh it. Live Activities and the widget extension need the team selected on both targets. A free account allows only a few App IDs per week; a paid account ($99/year) removes the limits.
 - **Simulator**: Run with an iPhone simulator as destination to try the app without straps. It uses simulated sensors.
 - **On a real iPhone with no straps**: Settings > Testing > "Use simulated devices".
-- **Recordings** are CSV files in the app's Documents folder, visible in the Files app (On My iPhone > ECG Recorder) and shareable from the Recordings tab. Columns: participant, device_id, stream, unix_time_s, sensor_time_ns, value, flag, note (ECG is packed one row per Bluetooth packet; `tools/unpack_ecg.py` expands it to one row per sample). Helper scripts: `tools/unpack_ecg.py`, `tools/signal_quality.py` (Python 3).
+- **Recordings** are CSV files in the app's Documents folder, visible in the Files app (On My iPhone > ECG Recorder) and shareable from the Recordings tab. Format reference: [CSV_FORMAT.md](CSV_FORMAT.md). Helper scripts: `tools/unpack_ecg.py`, `tools/signal_quality.py` (Python 3).
 
 ## Troubleshooting
 | Problem | Fix |

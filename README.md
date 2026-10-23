@@ -15,6 +15,10 @@ tools/test.sh          # logic tests on the Mac, about 12 s
 tools/test.sh --sim    # full suite on the iOS Simulator
 ```
 
+## Data
+
+One CSV per session, all participants, long format. Column and stream reference: [CSV_FORMAT.md](CSV_FORMAT.md).
+
 ## Tools
 
 - `tools/unpack_ecg.py`: expands a session CSV to one row per ECG sample.
