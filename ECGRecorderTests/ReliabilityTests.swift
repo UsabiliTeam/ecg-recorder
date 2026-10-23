@@ -213,6 +213,72 @@ final class ReliabilityTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(result).0.markers, expected)
     }
 
+    func testLabelsAreWrittenWithUndoAndSurviveIndexRebuild() async throws {
+        let member = EngineMember(slotID: UUID(), participant: "P01", deviceID: "A1B2C3D4")
+        let provider = ScriptedProvider()
+        let engine = SessionEngine(members: [member], provider: provider,
+                                   config: EngineConfig(rmssdWindow: 60, accRate: 50, accRange: 8, zonesEnabled: false))
+        await engine.begin()
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("labels_\(UUID().uuidString).csv")
+        defer { try? FileManager.default.removeItem(at: url) }
+        await engine.label(.start, "too early", at: .now())        // before the file exists: ignored
+        try await engine.startRecording(id: UUID(), tag: "l", start: .now, url: url, resume: false,
+                                        ntpOffset: nil, names: [member.slotID: "P01"])
+        let t0 = 1_800_000_000.0
+        await engine.label(.start, "Baseline", at: Stamp(mono: 1, unix: t0))
+        await engine.label(.start, "Positive", at: Stamp(mono: 2, unix: t0 + 60))
+        await engine.label(.end, "Positive", at: Stamp(mono: 3, unix: t0 + 120))
+        await engine.label(.start, "Oops", at: Stamp(mono: 4, unix: t0 + 130))
+        await engine.label(.undo, "Oops", at: Stamp(mono: 5, unix: t0 + 131))
+        await engine.label(.start, "Neg, ative", at: Stamp(mono: 6, unix: t0 + 180))
+        provider.sensor.send(heart([800]))
+        let finished = try await engine.stopRecording(ntpOffset: nil)
+        await engine.shutdown()
+
+        let rows = try String(contentsOf: url, encoding: .utf8).split(separator: "\n").dropFirst()
+            .map { CSVFormat.split($0) }.filter { $0[CSVFormat.column("stream")] == "LABEL" }
+        XCTAssertEqual(rows.map { $0[CSVFormat.column("note")] }, ["Baseline", "Positive", "Positive", "Oops", "Oops", "Neg, ative"])
+        XCTAssertEqual(rows.map { $0[CSVFormat.column("flag")] }, ["", "", "end", "", "undo", ""])
+        XCTAssertTrue(rows.allSatisfy { $0[CSVFormat.column("participant")].isEmpty })
+        let spans = try XCTUnwrap(finished.session.labels)
+        XCTAssertEqual(spans.prefix(2), [LabelSpan(name: "Baseline", start: t0, end: t0 + 60),
+                                         LabelSpan(name: "Positive", start: t0 + 60, end: t0 + 120)])
+        XCTAssertEqual(spans.map(\.name), ["Baseline", "Positive", "Neg, ative"])
+        let result = await IndexRebuilder.rebuild(csv: url)
+        XCTAssertEqual(try XCTUnwrap(result).0.labels, finished.session.labels)
+    }
+
+    func testLabelTimelineAppliesUndoAndEnd() {
+        func e(_ t: Double, _ kind: LabelEvent.Kind, _ name: String) -> LabelEvent { LabelEvent(t: t, kind: kind, name: name) }
+        // A then B: A runs until B; B runs until the end of the recording.
+        XCTAssertEqual(LabelTimeline.spans([e(0, .start, "A"), e(10, .start, "B")], until: 30),
+                       [LabelSpan(name: "A", start: 0, end: 10), LabelSpan(name: "B", start: 10, end: 30)])
+        // End leaves a gap until the next start.
+        XCTAssertEqual(LabelTimeline.spans([e(0, .start, "A"), e(5, .end, "A"), e(20, .start, "B")], until: 30),
+                       [LabelSpan(name: "A", start: 0, end: 5), LabelSpan(name: "B", start: 20, end: 30)])
+        // Undoing an end lets the label run on; undoing a start restores the one before.
+        XCTAssertEqual(LabelTimeline.spans([e(0, .start, "A"), e(5, .end, "A"), e(6, .undo, "A")], until: 30),
+                       [LabelSpan(name: "A", start: 0, end: 30)])
+        XCTAssertEqual(LabelTimeline.active([e(0, .start, "A"), e(5, .start, "B"), e(6, .undo, "B")])?.name, "A")
+        XCTAssertNil(LabelTimeline.active([e(0, .start, "A"), e(5, .end, "A")]))
+        XCTAssertEqual(LabelTimeline.spans([e(0, .undo, "x")], until: 30), [])
+    }
+
+    @MainActor
+    func testRosterLabelsValidateAndSeedPresets() throws {
+        let roster = Roster(url: nil)
+        XCTAssertEqual(roster.labels.map(\.name), ConditionLabel.presets)
+        XCTAssertThrowsError(try roster.addLabel("end", colorIndex: 0))
+        XCTAssertThrowsError(try roster.addLabel(" baseline", colorIndex: 0))
+        XCTAssertThrowsError(try roster.addLabel("=", colorIndex: 0))
+        let added = try roster.addLabel("=Rest", colorIndex: 3)
+        XCTAssertEqual(added.name, "Rest")
+        try roster.updateLabel(added.id, name: "Rest", colorIndex: 5)   // own name is fine
+        XCTAssertEqual(roster.label(named: "Rest")?.colorIndex, 5)
+        while roster.labels.count < ConditionLabel.maxCount { try roster.addLabel("L\(roster.labels.count)", colorIndex: 0) }
+        XCTAssertThrowsError(try roster.addLabel("One more", colorIndex: 0))
+    }
+
     func testPredictionSummaryShowsBothNumbersOnly() {
         func session(_ guess: Int?, _ actual: Double?) -> Session {
             Session(id: UUID(), start: .now, duration: 60, tag: "", participants: ["P01"], fileName: "",

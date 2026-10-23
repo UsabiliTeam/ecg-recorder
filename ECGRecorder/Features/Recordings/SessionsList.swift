@@ -149,6 +149,7 @@ struct SessionDetailView: View {
                     MetricStack(defaults: Metric.recordingDefaults, optional: Metric.recordingOptional) { metric in
                         chart(metric, traces: traces)
                     }
+                    if let labels = session.labels { labelList(labels) }
                     if let markers = session.markers { markerList(markers) }
                 } else {
                     ProgressView().frame(maxWidth: .infinity, minHeight: 200)
@@ -178,8 +179,29 @@ struct SessionDetailView: View {
                         colors: Dictionary(uniqueKeysWithValues: session.participants.map { ($0, roster.color(for: $0)) }),
                         xValues: .automatic(desiredCount: 4),
                         xLabel: { Format.elapsed($0.timeIntervalSince(session.start)) },
-                        markers: session.markers ?? [])
+                        markers: session.markers ?? [], labels: session.labels ?? [],
+                        labelColor: roster.labelColor(for:))
         }
+    }
+
+    /// Each labelled stretch: start and end since the recording began, and how long it lasted.
+    private func labelList(_ labels: [LabelSpan]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Labels").font(.headline)
+            ForEach(Array(labels.enumerated()), id: \.offset) { _, span in
+                let from = span.start - session.start.timeIntervalSince1970
+                HStack(spacing: 8) {
+                    ParticipantDot(color: roster.labelColor(for: span.name), size: 8)
+                    Text(span.name).lineLimit(1)
+                    Spacer()
+                    Text("\(Format.elapsed(from))–\(Format.elapsed(from + span.end - span.start))")
+                        .foregroundStyle(.secondary)
+                }
+                .monospacedDigit()
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .card()
     }
 
     private func markerList(_ markers: [EventMarker]) -> some View {

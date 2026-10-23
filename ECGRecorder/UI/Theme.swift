@@ -20,6 +20,11 @@ extension Roster {
         return Palette.participants[index % Palette.participantCount]
     }
 
+    /// Colour of a label by name, as recordings store it. Renamed or deleted labels fall back to a hash.
+    func labelColor(for name: String) -> Color {
+        Palette.label(label(named: name)?.colorIndex ?? Self.stableHash(name))
+    }
+
     /// FNV-1a; Swift's own hashing changes between launches.
     private static func stableHash(_ text: String) -> Int {
         Int(text.utf8.reduce(UInt32(2_166_136_261)) { ($0 ^ UInt32($1)) &* 16_777_619 } & 0x7fffffff)

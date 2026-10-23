@@ -47,6 +47,12 @@ final class RecordingController {
     /// The most recent marker, for a moment of feedback on screen.
     private(set) var lastMarker: EventMarker?
     var nextMarkerName: String { Validation.clean(markerName, max: Limits.maxTagLength) ?? EventMarker.defaultName(markerCount + 1) }
+    /// Label taps in this recording, undos included; the panel's timeline is drawn from these.
+    private(set) var labelEvents: [LabelEvent] = []
+    var activeLabel: LabelEvent? { LabelTimeline.active(labelEvents) }
+    /// The latest label tap can be taken back until then.
+    private(set) var undoUntil: Date?
+    static let undoSeconds: TimeInterval = 10
     /// Set when a recording has just been saved; the UI shows a confirmation and clears it.
     var lastSaved: Session?
     var notice: Notice?
@@ -285,6 +291,34 @@ final class RecordingController {
         Task { await engine.mark(marker.name, at: stamp) }
     }
 
+    /// Starts a condition. Tapping the label already running does nothing, so a double tap leaves one row.
+    func startLabel(_ name: String) {
+        guard activeLabel?.name != name else { return }
+        writeLabel(.start, name)
+    }
+
+    /// Closes the running condition; until the next label, no condition is active.
+    func endLabel() {
+        guard let active = activeLabel else { return }
+        writeLabel(.end, active.name)
+    }
+
+    /// Takes back the latest start or end. The file keeps both rows; the undo row tells an analysis to drop it.
+    func undoLabel() {
+        guard let until = undoUntil, until > .now, let last = LabelTimeline.applied(labelEvents).last else { return }
+        writeLabel(.undo, last.name)
+        undoUntil = nil
+    }
+
+    /// Like `mark`, the time is taken at the tap.
+    private func writeLabel(_ kind: LabelEvent.Kind, _ name: String) {
+        guard phase == .recording, let engine else { return }
+        let stamp = Stamp.now()
+        labelEvents.append(LabelEvent(t: stamp.unix, kind: kind, name: name))
+        undoUntil = kind == .undo ? nil : Date.now.addingTimeInterval(Self.undoSeconds)
+        Task { await engine.label(kind, name, at: stamp) }
+    }
+
     /// Stops and saves on its own once `autoStopSeconds` of actual recording has elapsed.
     private func scheduleAutoStop(from begin: Date) {
         autoStopAt = begin.addingTimeInterval(TimeInterval(autoStopSeconds))
@@ -430,6 +464,8 @@ final class RecordingController {
         markerName = ""
         markerCount = 0
         lastMarker = nil
+        labelEvents = []
+        undoUntil = nil
         banner = nil
         phase = .setup
         busy = false

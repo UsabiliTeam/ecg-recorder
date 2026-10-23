@@ -16,6 +16,9 @@ struct MetricChart: View {
     var zoom: Zoom?
     /// Events marked during the recording, drawn as labelled vertical lines.
     var markers: [EventMarker] = []
+    /// Condition labels, drawn as tinted bands behind the lines.
+    var labels: [LabelSpan] = []
+    var labelColor: (String) -> Color = { _ in .gray }
 
     struct Zoom {
         var visibleLength: TimeInterval
@@ -42,6 +45,7 @@ struct MetricChart: View {
     @ViewBuilder
     private var chart: some View {
         let base = Chart {
+            labelMarks
             markerMarks
             ForEach(points) { p in
                 LineMark(x: .value("Time", p.time), y: .value(title, p.value), series: .value("Series", p.series))
@@ -81,6 +85,15 @@ struct MetricChart: View {
                 }
             }
             .chartOverlay { proxy in tapOverlay(proxy) }
+    }
+
+    @ChartContentBuilder
+    private var labelMarks: some ChartContent {
+        ForEach(Array(labels.enumerated()), id: \.offset) { _, span in
+            RectangleMark(xStart: .value("Start", Date(timeIntervalSince1970: span.start)),
+                          xEnd: .value("End", Date(timeIntervalSince1970: span.end)))
+                .foregroundStyle(labelColor(span.name).opacity(0.15))
+        }
     }
 
     @ChartContentBuilder

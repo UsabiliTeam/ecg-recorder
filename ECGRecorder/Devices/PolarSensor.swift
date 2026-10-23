@@ -3,7 +3,7 @@ import CoreBluetooth
 import PolarBleSdk
 import os
 
-private let log = Logger(subsystem: "com.example.ecgrecorder", category: "polar")
+private let log = Logger(subsystem: "de.robertspang.ecgrecorder", category: "polar")
 
 /// Polar BLE SDK behind the `SensorProvider` protocol. One SDK instance serves all devices.
 final class PolarProvider: SensorProvider, @unchecked Sendable {
@@ -40,7 +40,7 @@ final class PolarHub: NSObject, @unchecked Sendable {
         api = PolarBleApiDefaultImpl.polarImplementation(
             DispatchQueue(label: "ecgrecorder.ble"),
             features: [.feature_hr, .feature_battery_info, .feature_device_info, .feature_polar_online_streaming],
-            restoreIdentifier: "com.example.ecgrecorder.central")
+            restoreIdentifier: "de.robertspang.ecgrecorder.central")
         super.init()
         api.observer = self
         api.deviceHrObserver = self

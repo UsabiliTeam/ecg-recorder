@@ -71,9 +71,12 @@ struct Session: Identifiable, Codable, Hashable, Sendable {
     let predictedRMSSD: Int?
     /// Events marked during the recording. Optional so index entries saved before markers existed still decode.
     let markers: [EventMarker]?
+    /// When each condition label was active, after undos. Optional for the same reason as `markers`.
+    let labels: [LabelSpan]?
 
     init(id: UUID, start: Date, duration: TimeInterval, tag: String, participants: [String], fileName: String,
-        avgHR: Double? = nil, avgRMSSD: Double? = nil, predictedRMSSD: Int? = nil, markers: [EventMarker]? = nil) {
+        avgHR: Double? = nil, avgRMSSD: Double? = nil, predictedRMSSD: Int? = nil, markers: [EventMarker]? = nil,
+        labels: [LabelSpan]? = nil) {
         self.id = id
         self.start = start
         self.duration = duration
@@ -84,6 +87,7 @@ struct Session: Identifiable, Codable, Hashable, Sendable {
         self.avgRMSSD = avgRMSSD
         self.predictedRMSSD = predictedRMSSD
         self.markers = markers
+        self.labels = labels
     }
 
     var title: String { tag.isEmpty ? "Recording" : tag }

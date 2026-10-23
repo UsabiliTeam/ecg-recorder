@@ -13,7 +13,7 @@ let package = Package(
             path: "ECGRecorder",
             sources: [
                 "Core/CSV.swift", "Core/ChartData.swift", "Core/ConnectionAdvisor.swift", "Core/Format.swift",
-                "Core/Models.swift", "Core/Validation.swift",
+                "Core/Labels.swift", "Core/Models.swift", "Core/Validation.swift",
                 "Devices/Sensor.swift", "Devices/SimulatedSensor.swift",
                 "Metrics/Metrics.swift", "Metrics/Artifacts.swift", "Metrics/SignalQuality.swift",
                 "Recording/LiveBuffer.swift", "Recording/RowWriter.swift", "Recording/SessionEngine.swift",

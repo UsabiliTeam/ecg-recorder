@@ -83,6 +83,7 @@ actor SessionEngine {
     private var sessionStart = Date()
     private var predictedRMSSD: Int?
     private var markers: [EventMarker] = []
+    private var labelEvents: [LabelEvent] = []
     private var writeError: String?
     private var tickCount = 0
 
@@ -148,6 +149,7 @@ actor SessionEngine {
         sessionID = id; sessionTag = tag; sessionStart = start
         self.predictedRMSSD = predictedRMSSD
         markers = []
+        labelEvents = []
         let prediction = predictedRMSSD.map { "predicted_rmssd_ms=\($0);" } ?? ""
         for rt in runtimes.values {
             if let name = names[rt.member.slotID] {
@@ -185,6 +187,13 @@ actor SessionEngine {
         markers.append(EventMarker(t: (stamp.unix * 1000).rounded() / 1000, name: name))
     }
 
+    /// A tap in the label panel; `stamp` is taken at the tap. `name` is already cleaned.
+    func label(_ kind: LabelEvent.Kind, _ name: String, at stamp: Stamp) {
+        guard file != nil else { return }
+        writeSession(.label, stamp, RowFields(event: name, flag: kind == .start ? nil : kind.rawValue))
+        labelEvents.append(LabelEvent(t: (stamp.unix * 1000).rounded() / 1000, kind: kind, name: name))
+    }
+
     func stopRecording(ntpOffset: Double?) throws -> FinishedRecording {
         let stamp = Stamp.now()
         // Artifacts need the beats after each interval, so the saved numbers are computed here, over everything.
@@ -201,13 +210,15 @@ actor SessionEngine {
             runtimes[id].map { ($0.member.participant, results[id]?.trace ?? []) }
         })
         let duration = Date.now.timeIntervalSince(sessionStart)
+        let labels = LabelTimeline.spans(labelEvents, until: (stamp.unix * 1000).rounded() / 1000)
         // Only meaningful for a single participant; a multi-participant session has no one "session average".
         let solo = order.count == 1 ? order.first.flatMap { results[$0]?.summary } : nil
         let session = Session(id: sessionID, start: sessionStart, duration: duration, tag: sessionTag,
                               participants: order.compactMap { runtimes[$0]?.member.participant },
                               fileName: fileName, avgHR: solo?.meanHR,
                               avgRMSSD: solo?.rmssd,
-                              predictedRMSSD: predictedRMSSD, markers: markers.isEmpty ? nil : markers)
+                              predictedRMSSD: predictedRMSSD, markers: markers.isEmpty ? nil : markers,
+                              labels: labels.isEmpty ? nil : labels)
         return FinishedRecording(session: session, traces: traces)
     }
 

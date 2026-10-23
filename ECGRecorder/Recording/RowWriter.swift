@@ -1,7 +1,7 @@
 import Foundation
 
 enum StreamKind: String {
-    case ecg = "ECG", hr = "HR", rr = "RR", contact = "CONTACT", event = "EVENT", sync = "SYNC", marker = "MARKER"
+    case ecg = "ECG", hr = "HR", rr = "RR", contact = "CONTACT", event = "EVENT", sync = "SYNC", marker = "MARKER", label = "LABEL"
 }
 
 /// Payload of one row. At most one of the value fields is set; it fills the `value` column.

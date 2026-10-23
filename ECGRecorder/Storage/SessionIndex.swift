@@ -58,6 +58,7 @@ enum IndexRebuilder {
         var end: Double?
         var names: [String] = []
         var markers: [EventMarker] = []
+        var labelEvents: [LabelEvent] = []
         var analyzers: [String: RecordingAnalysis] = [:]
         var hr: [String: Int] = [:]
         var col: [String: Int] = [:]          // header decides the schema: old files (v1) still load
@@ -105,6 +106,8 @@ enum IndexRebuilder {
                     analyzers[name] = analyzer
                 case "MARKER":
                     markers.append(EventMarker(t: t, name: note))
+                case "LABEL":
+                    if let kind = LabelEvent.Kind(rawValue: f[col["flag"]!]) { labelEvents.append(LabelEvent(t: t, kind: kind, name: note)) }
                 case "EVENT":
                     if note == "disconnect" || note == "no_data" { analyzers[name]?.gap() }
                 default: break
@@ -117,10 +120,11 @@ enum IndexRebuilder {
         let traces = results.mapValues(\.trace)
         // Only meaningful for a single participant; a multi-participant session has no one "session average".
         let solo = names.count == 1 ? names.first.flatMap { results[$0]?.summary } : nil
+        let labels = LabelTimeline.spans(labelEvents, until: end)
         let session = Session(id: id, start: Date(timeIntervalSince1970: start), duration: max(0, end - start),
                               tag: tag, participants: names, fileName: url.lastPathComponent,
                               avgHR: solo?.meanHR, avgRMSSD: solo?.rmssd, predictedRMSSD: predicted,
-                              markers: markers.isEmpty ? nil : markers)
+                              markers: markers.isEmpty ? nil : markers, labels: labels.isEmpty ? nil : labels)
         return (session, traces)
     }
 }

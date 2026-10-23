@@ -7,6 +7,8 @@ struct RecordTab: View {
     @Environment(SessionLibrary.self) private var library
     @Environment(BluetoothMonitor.self) private var bluetooth
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+    /// Recording view: live tiles (Signals) or the label panel (Labels). Remembered between recordings.
+    @AppStorage("record.showsLabels") private var showsLabels = false
 
     private var isSetup: Bool { recording.phase == .setup }
 
@@ -14,9 +16,10 @@ struct RecordTab: View {
         @Bindable var recording = recording
         VStack(spacing: Theme.gap) {
             header
+            if !isSetup { viewSwitch }
             notices
             Group {
-                if isSetup { SetupContent() } else { TileGrid(slots: recording.slots) }
+                if isSetup { SetupContent() } else if showsLabels { LabelPanel(slots: recording.slots) } else { TileGrid(slots: recording.slots) }
             }
             .frame(maxHeight: .infinity, alignment: .top)
             .transition(.opacity)
@@ -73,6 +76,14 @@ struct RecordTab: View {
             }
         }
         .frame(minHeight: 44)
+    }
+
+    private var viewSwitch: some View {
+        Picker("View", selection: $showsLabels) {
+            Text("Signals").tag(false)
+            Text("Labels").tag(true)
+        }
+        .pickerStyle(.segmented)
     }
 
     @ViewBuilder

@@ -13,6 +13,7 @@ struct SettingsView: View {
                     link("Participants", count: roster.participants.count) { ParticipantsSettings() }
                     link("Devices", count: roster.devices.count) { DevicesSettings() }
                     link("Saved tags", count: roster.tags.count) { TagsSettings() }
+                    link("Labels", count: roster.labels.count) { LabelsSettings() }
                 }
                 Section {
                     Picker("RMSSD window", selection: $settings.rmssdWindow) {
