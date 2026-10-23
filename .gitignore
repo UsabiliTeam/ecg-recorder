@@ -15,7 +15,6 @@ Gemini_Generated_Image_*.png
 # Internal notes and generated files, not part of the public repo
 CLAUDE.md
 principles.md
-BUILD_FROM_ZIP.md
 FEATURE_REQUESTS.md
 OPEN_QUESTIONS.md
 ECGRecorder.xcodeproj/

@@ -4,16 +4,9 @@ iPhone app (iOS 17+, portrait) that records up to 6 Polar H10 straps at once, sh
 
 ![Record screen](screenshots/record-screen.png)
 
-## Build
+## Build and run on your iPhone
 
-Requires Xcode 16+, [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) and an Apple ID for signing.
-
-```sh
-xcodegen generate
-open ECGRecorder.xcodeproj
-```
-
-Change the placeholder bundle ID (`com.example.ecgrecorder`) in `project.yml` to your own and pick your team in Xcode. The Simulator uses simulated devices; Bluetooth needs a real iPhone.
+Full step-by-step instructions (from a git clone or a zip, including signing with a free Apple ID): [BUILDING.md](BUILDING.md).
 
 ## Test
 
