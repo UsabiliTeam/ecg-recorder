@@ -1,0 +1,13 @@
+.DS_Store
+.build/
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# Real recordings and personal data
+ECG.jsonl
+Analysis/
+*.csv
+
+# Unused source art
+Gemini_Generated_Image_*.png
